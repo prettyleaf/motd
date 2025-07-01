@@ -6,13 +6,13 @@
 ### Root:
 
 ```
-bash <(curl -fsSL https://raw.githubusercontent.com/distillium/motd/main/install-motd.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/prettyleaf/motd/dev/install-motd.sh)
 ```
 
 ### Sudo:
 
 ```
-curl -fsSL https://raw.githubusercontent.com/distillium/motd/main/install-motd.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/prettyleaf/motd/dev/install-motd.sh | sudo bash
 ```
 
 ## Commands
