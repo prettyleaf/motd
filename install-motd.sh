@@ -39,7 +39,15 @@ SHOW_NET=true
 SHOW_DOCKER=true
 SHOW_FIREWALL=true
 SHOW_FIREWALL_RULES=false
+SHOW_REBOOT=true
+SHOW_ZOMBIES=true
 EOF
+
+if [ "$OS_ID" = "ubuntu" ]; then
+    echo "SHOW_UPDATES=true" >> "$CONFIG_FILE"
+else
+    echo "SHOW_UPDATES=false" >> "$CONFIG_FILE"
+fi
 
 echo "[+] Installing MOTD script..."
 mkdir -p /etc/update-motd.d
@@ -249,6 +257,38 @@ printf "${COLOR_LABEL}%-22s${COLOR_VALUE}%s${RESET}\n" "Kernel:" "$(uname -r)"
   fi
 }
 
+SYSTEM_STATUS_HEADER_SHOWN=false
+print_system_status_header() {
+  if ! $SYSTEM_STATUS_HEADER_SHOWN; then
+    printf "\n${COLOR_TITLE}• System Status${RESET}\n"
+    SYSTEM_STATUS_HEADER_SHOWN=true
+  fi
+}
+
+[ "$SHOW_REBOOT" = true ] && [ -f /var/run/reboot-required ] && {
+  print_system_status_header
+  printf "${COLOR_LABEL}%-22s${COLOR_RED}%s${RESET}\n" "System:" "Reboot required"
+}
+
+[ "$SHOW_ZOMBIES" = true ] && {
+  ZOMBIES=$(ps -A -o stat= | grep -c '^Z')
+  if [ "$ZOMBIES" -gt 0 ]; then
+    print_system_status_header
+    printf "${COLOR_LABEL}%-22s${COLOR_YELLOW}%d${RESET}\n" "Zombie processes:" "$ZOMBIES"
+  fi
+}
+
+[ "$SHOW_UPDATES" = true ] && {
+  if [ -x /usr/lib/update-notifier/update-motd-updates-available ]; then
+    UPDATES=$(/usr/lib/update-notifier/update-motd-updates-available)
+    if [ -n "$UPDATES" ]; then
+      print_system_status_header
+      printf "${COLOR_LABEL}%-22s${COLOR_YELLOW}%s${RESET}\n" "Updates:" "$UPDATES"
+    fi
+  fi
+}
+
+
 echo
 EOF
 
@@ -268,9 +308,12 @@ CHOICES=$(whiptail --title "MOTD Settings" --checklist \
 "SHOW_FIREWALL" "Статус UFW" $(grep -q 'SHOW_FIREWALL=true' "$CONFIG" && echo ON || echo OFF) \
 "SHOW_FIREWALL_RULES" "Правила UFW" $(grep -q 'SHOW_FIREWALL_RULES=true' "$CONFIG" && echo ON || echo OFF) \
 "SHOW_DOCKER" "Контейнеры Docker" $(grep -q 'SHOW_DOCKER=true' "$CONFIG" && echo ON || echo OFF) \
+"SHOW_REBOOT" "Требуется перезагрузка" $(grep -q 'SHOW_REBOOT=true' "$CONFIG" && echo ON || echo OFF) \
+"SHOW_ZOMBIES" "Зомби-процессы" $(grep -q 'SHOW_ZOMBIES=true' "$CONFIG" && echo ON || echo OFF) \
+"SHOW_UPDATES" "Доступные обновления" $(grep -q 'SHOW_UPDATES=true' "$CONFIG" && echo ON || echo OFF) \
 3>&1 1>&2 2>&3)
 
-for VAR in SHOW_LOGO SHOW_CPU SHOW_MEM SHOW_NET SHOW_FIREWALL SHOW_FIREWALL_RULES SHOW_DOCKER; do
+for VAR in SHOW_LOGO SHOW_CPU SHOW_MEM SHOW_NET SHOW_FIREWALL SHOW_FIREWALL_RULES SHOW_DOCKER SHOW_REBOOT SHOW_ZOMBIES SHOW_UPDATES; do
   if echo "$CHOICES" | grep -q "$VAR"; then
     sed -i "s/^$VAR=.*/$VAR=true/" "$CONFIG"
   else
